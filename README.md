@@ -80,8 +80,8 @@ struct data {
 ...
 
 using storage = persia::storage<int, data>;
-persia::expected<storage, std::error_code> expected_storage
-    = storage::create("data.pmap", 8192);
+
+storage::expected expected_storage = storage::create("data.pmap", 8192);
 if(!expected_storage) {
     std::cout << expected_storage.error().message() << '\n';
     return;
@@ -137,6 +137,35 @@ auto& storage = *expected_storage;
 ...
 bool const inserted =  storage.insert(data{-1, -1});
 ```
+
+#### Insert or assign item
+
+```cpp
+...
+bool const updated =  storage.insert_or_assign(data{-1, -1});
+```
+
+
+#### Update item
+
+```cpp
+...
+data* p =  storage.find(-1);
+if(!p) {
+    std::cout << "Not found\n";
+    return;
+}
+p->value = 1;
+```
+
+
+#### Erase item
+
+```cpp
+...
+bool const erased = storage.erase(-1);
+```
+
 
 
 ## Usage
