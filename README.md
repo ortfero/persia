@@ -1,14 +1,48 @@
 # persia
 
-C++ 17 single-header library for persistent data structures
+C++ 17 header only library for persistent data structures
+
+
+## Mapped file
+
+Memory-mapped file
+
+### Synopsis
+
+```cpp
+class mapped_file {
+public:    
+    using size_type = std::size_t;
+
+    class expected {
+    public:
+        explicit operator bool () const noexcept;
+        mapped_file& operator * () & noexcept;
+        mapped_file&& operator * () && noexcept;
+        mapped_file* operator -> () noexcept;
+        std::error_code error() const noexcept;
+    };
+    
+    static expected create(std::filesystem::path const& path) noexcept;
+    
+    mapped_file() noexcept = default;
+    mapped_file(mapped_file const&) = delete;
+    mapped_file& operator = (mapped_file const&) = delete;
+    mapped_file(mapped_file&& other) noexcept;
+    mapped_file& operator = (mapped_file&& other) noexcept;
+    ~mapped_file();
+   
+    explicit operator bool () const noexcept;
+
+    template<typename T> T* cast(size_type offset) noexcept;
+    size_type size() const noexcept;
+};
+```
 
 
 ## Storage
 
-### Features
-
-* Automatic storage extending if requested capacity is greater then the actual capacity.
-
+Persistent key-value storage
 
 ### Synopsis
 
@@ -28,6 +62,15 @@ public:
     using size_type = std::uint32_t;
     using const_iterator = /* implementation defined */;
     using iterator = /* implementation defined */;
+    
+    class expected {
+    public:
+        explicit operator bool () const noexcept;
+        storage& operator * () & noexcept;
+        storage&& operator * () && noexcept;
+        storage* operator -> () noexcept;
+        std::error_code error() const noexcept;
+    };
     
     static expected<storage, std::error_code>
     create(std::filesystem::path const& path, size_type initial_capacity);
