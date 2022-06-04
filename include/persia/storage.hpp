@@ -48,10 +48,6 @@ namespace persia {
                 return "Mismatch file size";
             case error::mismatch_item_size:
                 return "Mismatch item size";
-            case error::duplicated_key:
-                return "Duplicated key";
-            case error::storage_is_full:
-                return "Storage is full";
             default:
                 return "Unknown";
             }
@@ -82,16 +78,14 @@ namespace persia {
     namespace detail {
         
         struct alignas(8) header {
-            constexpr static valid_signature = 0xDA1AF11Eu;
-            
-            char signature[4];
+            unsigned char signature[4];
             std::uint32_t item_size{0};
             std::uint32_t capacity{0};
             std::uint32_t size{0};
         }; // header
         
         
-        enum class marker {
+        enum class marker: std::uint32_t {
             empty = 0, occupied = 0xFEEDDA1A
         };
         
@@ -109,14 +103,14 @@ namespace persia {
     template<typename Key,
              typename Value,
              class Adapter = Value,
-             class Indices = std::unordered_map<K, storage_index>>
+             class Indices = std::unordered_map<Key, storage_index>>
     class storage {
         
         Indices occupied_indices_;
         std::vector<storage_index> free_indices_;
         mapped_file mapped_file_;
-        detail::header* header_;
-        detail::record<V>* records_;
+        detail::header* header_{nullptr};
+        detail::record<Value>* records_{nullptr};
         
         
         template<class I, class R, class D> class basic_iterator {
@@ -134,8 +128,17 @@ namespace persia {
             basic_iterator(basic_iterator const&) noexcept = default;
             basic_iterator& operator = (basic_iterator const&) noexcept = default;
             
-            bool operator == (basic_iterator const&) const noexcept = default;
-            bool operator != (basic_iterator const&) const noexcept = default;
+            
+            bool operator == (basic_iterator const& other) const noexcept {
+                return index_it_ == other.index_it_;
+            }
+            
+            
+            bool operator != (basic_iterator const& other) const noexcept {
+                return index_it_ != other.index_it_;
+            }
+            
+            
             D& operator * () const noexcept { return records_[index_it_->second].data; }
             D* operator -> () const noexcept { return &records_[index_it_->second].data; }
             
@@ -158,10 +161,10 @@ namespace persia {
         using adapter_type = Adapter;
         using indices_type = Indices;
         using size_type = std::uint32_t;
-        using const_iterator = basic_iterator<typename IndicesMap::const_iterator,
+        using const_iterator = basic_iterator<typename Indices::const_iterator,
                                               detail::record<Value> const,
                                               Value const>;
-        using iterator = basic_iterator<typename IndicesMap::iterator,
+        using iterator = basic_iterator<typename Indices::iterator,
                                         detail::record<Value>,
                                         Value>;
                                         
@@ -175,11 +178,15 @@ namespace persia {
                              size_type initial_capacity);
         
         
-        storage() = delete;
+        storage() = default;
         storage(storage const&) = delete;
         storage& operator = (storage const&) = delete;
         storage(storage&&) noexcept = default;
         storage& operator = (storage&&) noexcept = default;
+        
+        explicit operator bool () const noexcept {
+            return !!mapped_file_;
+        }
         
         
         size_type capacity() const noexcept {
@@ -193,6 +200,11 @@ namespace persia {
         
         
         bool empty() const noexcept {
+            return occupied_indices_.empty();
+        }
+        
+        
+        bool fully_occupied() const noexcept {
             return free_indices_.empty();
         }
         
@@ -224,7 +236,7 @@ namespace persia {
             free_indices_.pop_back();
             auto const key = Adapter::key_of(value);
             auto emplaced = occupied_indices_.try_emplace(key, index);
-            if(!emplaced.second);
+            if(!emplaced.second)
                 return false;
             auto* record = records_ + index;
             record->marker = detail::marker::occupied;
@@ -243,7 +255,7 @@ namespace persia {
                 }
                 auto const index = free_indices_.back();
                 free_indices_.pop_back();
-                emplaced->first->second = index;
+                emplaced.first->second = index;
                 auto* record = records_ + index;
                 record->marker = detail::marker::occupied;
                 record->data = value;
@@ -298,11 +310,11 @@ namespace persia {
         
     private:
     
-        storage(I&& occupied_indices,
+        storage(Indices&& occupied_indices,
                 std::vector<storage_index>&& free_indices,
                 mapped_file&& mapped_file,
                 detail::header* header,
-                detail::record<V>* records) noexcept
+                detail::record<Value>* records) noexcept
             : occupied_indices_{std::move(occupied_indices)}
             , free_indices_{std::move(free_indices)}
             , mapped_file_{std::move(mapped_file)}
@@ -361,7 +373,7 @@ namespace persia {
             return {make_error_code(error::file_size_is_too_small)};
         auto* file = std::fopen(path.string().data(), "w+b");
         if(file == nullptr)
-            return {std::error_code{std::system_category(), errno}};
+            return {std::error_code{int(errno), std::system_category()}};
         std::fclose(file);
         namespace fs = std::filesystem;
         auto const storage_size = sizeof(detail::header) + initial_capacity * sizeof(detail::record<V>);
