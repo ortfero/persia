@@ -20,33 +20,33 @@
 namespace persia {
 
 
-    enum class error {
+    enum class storage_error {
         ok,
         file_size_is_too_small,
         invalid_file_signature,
         mismatch_file_size,
         mismatch_item_size,
         file_is_corrupted
-    }; // error
+    }; // storage_error
 
 
-    class error_category : public std::error_category {
+    class storage_error_category : public std::error_category {
 
         char const* name() const noexcept override {
             return "persia";
         }
 
         std::string message(int code) const noexcept override {
-            switch(error(code)) {
-            case error::ok:
+            switch(storage_error(code)) {
+            case storage_error::ok:
                 return "Ok";
-            case error::file_size_is_too_small:
+            case storage_error::file_size_is_too_small:
                 return "Storage file is too small";
-            case error::invalid_file_signature:
+            case storage_error::invalid_file_signature:
                 return "Invalid storage file signature";
-            case error::mismatch_file_size:
+            case storage_error::mismatch_file_size:
                 return "Mismatch file size";
-            case error::mismatch_item_size:
+            case storage_error::mismatch_item_size:
                 return "Mismatch item size";
             default:
                 return "Unknown";
@@ -55,11 +55,11 @@ namespace persia {
     };
 
 
-    inline error_category const persia_category;
+    inline storage_error_category const storage_error_category;
 
 
-    inline std::error_code make_error_code(error e) noexcept {
-        return {int(e), persia_category};
+    inline std::error_code make_error_code(storage_error e) noexcept {
+        return {int(e), storage_error_category};
     }
     
 } // namespace persia
@@ -67,7 +67,7 @@ namespace persia {
 
 namespace std {
 
-    template <> struct is_error_code_enum<persia::error> : true_type {};
+    template <> struct is_error_code_enum<persia::storage_error> : true_type {};
 
 } // std
 
@@ -375,7 +375,7 @@ namespace persia {
     storage<K, V, A, I>::create(std::filesystem::path const& path,
                                 typename storage<K, V, A, I>::size_type initial_capacity) {
         if(initial_capacity == 0)
-            return {make_error_code(error::file_size_is_too_small)};
+            return {make_error_code(storage_error::file_size_is_too_small)};
         auto* file = std::fopen(path.string().data(), "w+b");
         if(file == nullptr)
             return {std::error_code{int(errno), std::system_category()}};
@@ -422,17 +422,17 @@ namespace persia {
         if(!expected_file)
             return {expected_file.error()};
         if(expected_file->size() < sizeof(detail::header) + sizeof(detail::record<V>))
-            return {make_error_code(error::file_size_is_too_small)};
+            return {make_error_code(storage_error::file_size_is_too_small)};
         auto* header = expected_file->cast<detail::header>(0);
         if(header->signature[0] != 0xDA
             || header->signature[1] != 0x1A
             || header->signature[2] != 0xF1
             || header->signature[3] != 0x1E)
-            return {make_error_code(error::invalid_file_signature)};
+            return {make_error_code(storage_error::invalid_file_signature)};
         if(expected_file->size() != sizeof(detail::header) + header->capacity * sizeof(detail::record<V>))
-            return {make_error_code(error::mismatch_file_size)};
+            return {make_error_code(storage_error::mismatch_file_size)};
         if(sizeof(V) != header->item_size)
-            return {make_error_code(error::mismatch_item_size)};
+            return {make_error_code(storage_error::mismatch_item_size)};
         if(initial_capacity > header->capacity) {
             *expected_file = mapped_file{};
             return expand(path, initial_capacity);
@@ -452,7 +452,7 @@ namespace persia {
                 occupied_indices[A::key_of(record->data)] = i;
                 continue;
             default:
-                return {make_error_code(error::file_is_corrupted)};
+                return {make_error_code(storage_error::file_is_corrupted)};
             }
         }
         return {storage{std::move(occupied_indices),
@@ -491,7 +491,7 @@ namespace persia {
                 occupied_indices[A::key_of(record->data)] = i;
                 continue;
             default:
-                return {make_error_code(error::file_is_corrupted)};
+                return {make_error_code(storage_error::file_is_corrupted)};
             }
         }
         for(auto i = header->capacity; i != initial_capacity; ++i) {
