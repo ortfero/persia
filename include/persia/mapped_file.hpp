@@ -176,8 +176,13 @@ namespace persia {
         }
         
         
-        mapped_file& operator * () noexcept {
+        mapped_file& operator * () & noexcept {
             return file_;
+        }
+        
+        
+        mapped_file&& operator * () && noexcept {
+            return std::move(file_);
         }
         
         
