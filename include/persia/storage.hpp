@@ -350,8 +350,13 @@ namespace persia {
         }
         
         
-        storage& operator * () noexcept {
+        storage& operator * () & noexcept {
             return storage_;
+        }
+        
+        
+        storage&& operator * () && noexcept {
+            return std::move(storage_);
         }
         
         
