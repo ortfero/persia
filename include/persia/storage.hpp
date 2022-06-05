@@ -33,7 +33,7 @@ namespace persia {
     class storage_error_category : public std::error_category {
 
         char const* name() const noexcept override {
-            return "persia";
+            return "storage";
         }
 
         std::string message(int code) const noexcept override {
@@ -48,6 +48,8 @@ namespace persia {
                 return "Mismatch file size";
             case storage_error::mismatch_item_size:
                 return "Mismatch item size";
+            case storage_error::file_is_corrupted:
+                return "File is corrupted";
             default:
                 return "Unknown";
             }
