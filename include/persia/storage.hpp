@@ -178,6 +178,9 @@ namespace persia {
         
         static expected open(std::filesystem::path const& path,
                              size_type initial_capacity);
+
+        static expected open_or_create(std::filesystem::path const& path,
+                                       size_type initial_capacity);
         
         
         storage() = default;
@@ -463,6 +466,19 @@ namespace persia {
                         header,
                         records}};
 
+    }
+
+
+    template<typename K, typename V, class A, class I> typename storage<K, V, A, I>::expected
+    storage<K, V, A, I>::open_or_create(std::filesystem::path const& path,
+                                        size_type initial_capacity) {
+        namespace fs = std::filesystem;
+        auto ec = std::error_code{};
+        if(fs::exists(path, ec))
+            return open(path, initial_capacity);
+        if(!!ec)
+            return expected{ec};
+        return create(path, initial_capacity);
     }
     
     
