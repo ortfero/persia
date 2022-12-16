@@ -285,7 +285,7 @@ namespace persia {
             record->marker = detail::marker::empty;
             occupied_indices_.erase(index_found);
             return true;
-        }
+        }        
         
         
         Value const* find(Key const& key) const noexcept {
@@ -303,6 +303,11 @@ namespace persia {
                 return nullptr;
             auto const index = index_found->second;
             return &records_[index].data;
+        }
+
+
+        bool contains(Key const& key) const noexcept {
+            return find(key) != nullptr;
         }
         
         
