@@ -241,8 +241,10 @@ namespace persia {
             free_indices_.pop_back();
             auto const key = Adapter::key_of(value);
             auto emplaced = occupied_indices_.try_emplace(key, index);
-            if(!emplaced.second)
+            if(!emplaced.second) {
+                free_indices_.push_back(index);
                 return false;
+            }
             auto* record = records_ + index;
             record->marker = detail::marker::occupied;
             record->data = value;
