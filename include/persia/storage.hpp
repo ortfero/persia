@@ -16,7 +16,6 @@
 #include <persia/mapped_file.hpp>
 
 
-
 namespace persia {
 
 
@@ -285,6 +284,20 @@ namespace persia {
             record->marker = detail::marker::empty;
             occupied_indices_.erase(index_found);
             return true;
+        }
+
+
+        std::optional<Value> extract(Key const& key) {
+            auto index_found = occupied_indices_.find(key);
+            if(index_found == occupied_indices_.end())
+                return std::nullopt;
+            auto const index = index_found->second;
+            free_indices_.push_back(index);
+            auto* record = records_ + index;
+            auto const item = *record;
+            record->marker = detail::marker::empty;
+            occupied_indices_.erase(index_found);
+            return {item};
         }        
         
         
