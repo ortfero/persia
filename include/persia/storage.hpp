@@ -294,7 +294,7 @@ namespace persia {
             auto const index = index_found->second;
             free_indices_.push_back(index);
             auto* record = records_ + index;
-            auto const item = *record;
+            auto const item = record->data;
             record->marker = detail::marker::empty;
             occupied_indices_.erase(index_found);
             return {item};
