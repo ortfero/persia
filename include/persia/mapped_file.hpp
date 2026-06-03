@@ -6,6 +6,7 @@
 
 
 #include <cstddef>
+#include <expected>
 #include <filesystem>
 #include <system_error>
 
@@ -59,8 +60,8 @@ namespace persia {
     public:
     
         using size_type = std::size_t;
+        using expected = std::expected<mapped_file, std::error_code>;
 
-        class expected;
         static expected create(std::filesystem::path const& path) noexcept;
         
         
@@ -154,89 +155,46 @@ namespace persia {
     }; // mapped_file
 
 
-    class mapped_file::expected {
-    private:
-        std::error_code error_code_;
-        mapped_file file_;
-            
-    public:
-        
-        expected(std::error_code ec)
-            : error_code_{ec} {
-        }
-        
-        
-        expected(mapped_file&& f)
-            : file_(std::move(f)) {
-        }
-        
-        
-        explicit operator bool () const noexcept {
-            return !!file_;
-        }
-        
-        
-        mapped_file& operator * () & noexcept {
-            return file_;
-        }
-        
-        
-        mapped_file&& operator * () && noexcept {
-            return std::move(file_);
-        }
-        
-        
-        mapped_file* operator -> () noexcept {
-            return &file_;
-        }
-        
-        
-        std::error_code error() const noexcept {
-            return error_code_;
-        }
-    }; // mapped_file::expected
-
-
-    inline  mapped_file::expected mapped_file::create(std::filesystem::path const& path) noexcept {
+    inline mapped_file::expected mapped_file::create(std::filesystem::path const& path) noexcept {
 #if defined(_WIN32)
         auto file = ::CreateFileA(path.string().data(),
                                   GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                                   NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         if(file == INVALID_HANDLE_VALUE)
-            return {std::error_code{int(::GetLastError()), std::system_category()}};
+            return std::unexpected(std::error_code{int(::GetLastError()), std::system_category()});
         auto size = ::GetFileSize(file, NULL);
         //constexpr auto PAGE_READWRITE = 0x04;
         auto mapping = ::CreateFileMapping(file, NULL, PAGE_READWRITE, 0, 0, NULL);
         if(mapping == NULL) {
             auto const code = int(::GetLastError());
             ::CloseHandle(file);
-            return {std::error_code{code, std::system_category()}};
+            return std::unexpected(std::error_code{code, std::system_category()});
         }
         auto* address = ::MapViewOfFile(mapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
         if(address == nullptr) {
             auto const code = int(::GetLastError());
             ::CloseHandle(file);
-            return {std::error_code{code, std::system_category()}};
+            return std::unexpected(std::error_code{code, std::system_category()});
         }
-        return {mapped_file{address, size, file, mapping}};
+        return mapped_file{address, size, file, mapping};
 #else
         auto file = ::open(path.string().data(), O_RDWR);
         if(file == -1)
-            return {std::error_code{errno, std::system_category()}};
+            return std::unexpected(std::error_code{errno, std::system_category()});
         struct stat sb;
         if(::fstat(file, &sb) == -1) {
             auto const code = errno;
             ::close(file);
-            return {std::error_code{code, std::system_category()}};
+            return std::unexpected(std::error_code{code, std::system_category()});
         }
         auto const size = static_cast<size_type>(sb.st_size);
         auto* address = ::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, file, 0);
         if(address == MAP_FAILED) {
             auto const code = errno;
             ::close(file);
-            return {std::error_code{code, std::system_category()}};
+            return std::unexpected(std::error_code{code, std::system_category()});
         }
-        return {mapped_file{address, size, file}};
+        return mapped_file{address, size, file};
 #endif
     }
     

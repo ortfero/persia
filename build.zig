@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
     test_mod.addCSourceFile(.{
         .file = b.path("test/test.cpp"),
         .flags = &.{
-            "-std=c++17",
+            "-std=c++23",
             "-Wall",
             "-Wextra",
             "-Wpedantic",

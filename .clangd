@@ -1,0 +1,6 @@
+CompileFlags:
+  Add:
+    - -std=c++23
+    - -I include
+    - -I test
+  Compiler: clang
