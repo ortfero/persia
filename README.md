@@ -218,13 +218,18 @@ Drop the contents of the `include` directory somewhere at your include path
 
 ## Tests
 
-To run tests:
+The project uses the [Zig build system](https://ziglang.org/) (Zig 0.16+). Zig
+ships its own C/C++ toolchain, so no separate compiler install is required.
 
 ```shell
 cd persia
-mkdir build
-cd build
-meson ..
-ninja
-./test/persia-test
+zig build test
+```
+
+Other useful invocations:
+
+```shell
+zig build                                # build the persia-test executable
+zig build -Doptimize=ReleaseFast test    # release build
+zig build -Dtarget=x86_64-windows test   # cross-compile
 ```

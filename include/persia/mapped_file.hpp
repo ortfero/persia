@@ -229,9 +229,9 @@ namespace persia {
             ::close(file);
             return {std::error_code{code, std::system_category()}};
         }
-        auto size = sb.st_size;
-        auto* address = ::mmap(NULL, size, PROT_RDWR, MAP_PRIVATE, file, 0);
-        if(address == MMAP_FAILED) {
+        auto const size = static_cast<size_type>(sb.st_size);
+        auto* address = ::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, file, 0);
+        if(address == MAP_FAILED) {
             auto const code = errno;
             ::close(file);
             return {std::error_code{code, std::system_category()}};

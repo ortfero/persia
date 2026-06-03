@@ -15,7 +15,7 @@ struct item {
     int key;
     int data;
     
-    static key_of(item const& item) noexcept {
+    static int key_of(item const& item) noexcept {
         return item.key;
     }
 };
